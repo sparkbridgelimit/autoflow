@@ -1,0 +1,60 @@
+[
+  {
+    "id": "start",
+    "type": "start",
+    "name": "Start Node",
+    "description": "This is the start node of the workflow.",
+    "execute": "start_logic",
+    "inputs": [],
+    "outputs": [
+      {
+        "id": "output_001",
+        "name": "Start Output",
+        "type": "arrow",
+        "description": "The output of the start node"
+      }
+    ],
+    "data_schema": {},
+    "data": {},
+    "data_ui_schema": {}
+  },
+  {
+    "id": "log",
+    "type": "log",
+    "name": "Log Node",
+    "description": "Logs messages during workflow execution.",
+    "execute": "log_logic",
+    "inputs": [
+      {
+        "id": "input_001",
+        "name": "Log Input",
+        "type": "arrow",
+        "description": "The input of the log node"
+      }
+    ],
+    "outputs": [
+      {
+        "id": "output_001",
+        "name": "Log Output",
+        "type": "arrow",
+        "description": "The output of the log node"
+      }
+    ]
+  },
+  {
+    "id": "end_001",
+    "type": "end",
+    "name": "End Node",
+    "description": "This is the end node of the workflow.",
+    "execute": "end_logic",
+    "inputs": [
+      {
+        "id": "input_001",
+        "name": "End Input",
+        "type": "arrow",
+        "description": "The input of the end node"
+      }
+    ],
+    "outputs": []
+  }
+]
