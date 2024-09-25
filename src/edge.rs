@@ -1,6 +1,8 @@
+use serde::{Deserialize, Serialize};
+
 use crate::endpoint::Endpoint;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Edge {
     pub id: String,                      // Edge 的唯一标识符
     pub source: Endpoint,                // 起点（输出端点）

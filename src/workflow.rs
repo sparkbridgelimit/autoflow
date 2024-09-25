@@ -1,7 +1,9 @@
+use serde::{Deserialize, Serialize};
+
 use crate::{flow::Flow, workflow_setting::WorkerSetting};
 
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Workflow {
-  pub ext_version: String,
   pub flow: Flow,
   pub name: String,
   pub description: String,

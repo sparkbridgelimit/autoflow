@@ -8,8 +8,8 @@ pub fn generate_id() -> String {
 }
 
 // 默认 node_type 为 Normal
-pub fn default_node_type() -> NodeType {
-    NodeType::Normal
+pub fn default_node_type() -> String {
+    NodeType::Normal.code().to_string()
 }
 
 // 默认 description

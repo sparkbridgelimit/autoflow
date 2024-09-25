@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use crate::{defaults::*, enums::{NodeType, Status}};
+use nanoid::nanoid;
 
 /// 表示节点在画布上的位置。
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -32,13 +33,13 @@ pub struct RetryConfig {
     pub delay: u32,        // 重试延迟时间（秒）
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)] // 添加 Deserialize 和 Serialize
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Node {
     #[serde(default = "generate_id")] 
     pub id: String,
     
     #[serde(default = "default_node_type")]
-    pub node_type: NodeType,
+    pub node_type: String,
     
     #[serde(default)]
     pub name: String,
@@ -65,13 +66,33 @@ pub struct Node {
     pub component: String,
     
     #[serde(default)]
-    pub exec_fun: String,
+    pub executor_id: String,
     
     #[serde(default = "default_status")]
     pub status: Status,
     
     #[serde(default)]
     pub extra: Option<ExtraConfig>,
+}
+
+impl Node {
+    fn new() -> Self {
+        Node {
+            id: nanoid!(8),
+            node_type: NodeType::Normal.code(),
+            name: String::default(),
+            description: String::default(),
+            inputs: vec![],
+            outputs: vec![],
+            data_schema: serde_json::Value::default(),
+            data: serde_json::Value::default(),
+            data_ui_schema: serde_json::Value::default(),
+            component: String::default(),
+            executor_id: String::default(),
+            status: Status::Pending,
+            extra: None,
+        }
+    }
 }
 
 pub trait NodeTrait {
