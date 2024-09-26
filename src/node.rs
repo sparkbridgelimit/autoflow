@@ -74,14 +74,14 @@ impl Node {
 }
 
 pub trait NodeBuilderTrait {
-    fn start(name: String) -> Self;
-    fn normal(name: String) -> Self;
+    fn start(name: &str) -> Self;
+    fn normal(name: &str) -> Self;
     fn add_input_endpoint(&mut self);
     fn add_output_endpoint(&mut self);
 }
 
 impl NodeBuilderTrait for Node {
-    fn start(name: String) -> Self {
+    fn start(name: &str) -> Self {
         let ed = EndpointConfig {
             id: nanoid!(8),
             name: "output".to_string(),
@@ -97,7 +97,7 @@ impl NodeBuilderTrait for Node {
         Node {
             id: nanoid!(8),
             node_type: NodeType::Start.code().to_string(),
-            name,
+            name: name.to_string(),
             description: String::default(),
             inputs: vec![],
             outputs: vec![],
@@ -111,7 +111,7 @@ impl NodeBuilderTrait for Node {
         }
     }
 
-    fn normal(name: String) -> Self {
+    fn normal(name: &str) -> Self {
         let ed = EndpointConfig {
             id: nanoid!(8),
             name: "output".to_string(),
@@ -127,7 +127,7 @@ impl NodeBuilderTrait for Node {
         Node {
             id: nanoid!(8),
             node_type: NodeType::Normal.code().to_string(),
-            name,
+            name: name.to_string(),
             description: String::default(),
             inputs: vec![],
             outputs: vec![],

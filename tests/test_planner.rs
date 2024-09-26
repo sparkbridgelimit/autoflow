@@ -1,12 +1,11 @@
 #[cfg(test)]
 mod tests {
     use autoflow::{
-        edge::Edge,
+        edge::{Edge, EdgeBuilderTrait},
         endpoint::EndpointRef,
-        node::{EndpointConfig, Node},
+        node::{EndpointConfig, Node, NodeAttrTrait, NodeBuilderTrait},
         planner::Planner,
     };
-    use serde_json::json;
 
     #[test]
     fn test_linear_graph() {
@@ -128,121 +127,35 @@ mod tests {
         assert_eq!(next[0].id, "node_b");
     }
 
+    // 分支图
     #[test]
     fn test_branch_graph() {
-        // Test a graph where the start node branches to multiple nodes
+        let mut s = Node::start("start node");
+        s.add_output_endpoint();
 
-        // Create start node A
-        let node_a = Node {
-            id: "node_a".to_string(),
-            node_type: "start".to_string(),
-            name: "A".to_string(),
-            description: "Start node".to_string(),
-            inputs: vec![],
-            outputs: vec![EndpointConfig {
-                id: "output_a".to_string(),
-                name: "output".to_string(),
-                required: true,
-                data_type: "json".to_string(),
-                display_type: "text".to_string(),
-                description: "Output endpoint for node A".to_string(),
-            }],
-            data_schema: json!({}),
-            data: json!({}),
-            data_ui_schema: json!({}),
-            component: "start_component".to_string(),
-            executor_id: "executor1".to_string(),
-            status: "Pending".to_string(),
-            extra: None,
-        };
+        let mut n1 = Node::normal("process node1");
+        n1.add_input_endpoint();
+        n1.add_output_endpoint();
 
-        // Create node B
-        let node_b = Node {
-            id: "node_b".to_string(),
-            node_type: "normal".to_string(),
-            name: "B".to_string(),
-            description: "Branch node B".to_string(),
-            inputs: vec![EndpointConfig {
-                id: "input_b".to_string(),
-                name: "input".to_string(),
-                required: true,
-                data_type: "json".to_string(),
-                display_type: "text".to_string(),
-                description: "Input endpoint for node B".to_string(),
-            }],
-            outputs: vec![],
-            data_schema: json!({}),
-            data: json!({}),
-            data_ui_schema: json!({}),
-            component: "normal_component".to_string(),
-            executor_id: "executor2".to_string(),
-            status: "Pending".to_string(),
-            extra: None,
-        };
+        let mut n2 = Node::normal("process node2");
+        n2.add_input_endpoint();
 
-        // Create node C
-        let node_c = Node {
-            id: "node_c".to_string(),
-            node_type: "normal".to_string(),
-            name: "C".to_string(),
-            description: "Branch node C".to_string(),
-            inputs: vec![EndpointConfig {
-                id: "input_c".to_string(),
-                name: "input".to_string(),
-                required: true,
-                data_type: "json".to_string(),
-                display_type: "text".to_string(),
-                description: "Input endpoint for node C".to_string(),
-            }],
-            outputs: vec![],
-            data_schema: json!({}),
-            data: json!({}),
-            data_ui_schema: json!({}),
-            component: "normal_component".to_string(),
-            executor_id: "executor3".to_string(),
-            status: "Pending".to_string(),
-            extra: None,
-        };
-
-        // Create edges from node A to node B and node C
-        let edge_ab = Edge {
-            id: "edge_ab".to_string(),
-            source: EndpointRef {
-                node_id: "node_a".to_string(),
-                endpoint_id: "output_a".to_string(),
-            },
-            target: EndpointRef {
-                node_id: "node_b".to_string(),
-                endpoint_id: "input_b".to_string(),
-            },
-        };
-
-        let edge_ac = Edge {
-            id: "edge_ac".to_string(),
-            source: EndpointRef {
-                node_id: "node_a".to_string(),
-                endpoint_id: "output_a".to_string(),
-            },
-            target: EndpointRef {
-                node_id: "node_c".to_string(),
-                endpoint_id: "input_c".to_string(),
-            },
-        };
-
-        // Initialize the planner with nodes and edges
-        let mut planner = Planner::new(
-            vec![node_a.clone(), node_b.clone(), node_c.clone()],
-            vec![edge_ab, edge_ac],
+        let e1 = Edge::connect(&s.get_output_ref(0).unwrap(), &n1.get_input_ref(0).unwrap());
+        let e2 = Edge::connect(
+            &s.get_output_ref(0).unwrap(),
+            &n2.get_input_ref(0).unwrap(),
         );
 
-        // Start from the start node
-        let start_node = planner.start_node.clone();
-        let next_nodes = planner.next_nodes(&start_node, &json!(null));
+        let mut planner: Planner = Planner::new(vec![s, n1, n2], vec![e1, e2]);
 
-        // Verify that both node B and node C are ready to execute
-        assert_eq!(next_nodes.len(), 2);
-        let next_ids: Vec<String> = next_nodes.iter().map(|n| n.id.clone()).collect();
-        assert!(next_ids.contains(&"node_b".to_string()));
-        assert!(next_ids.contains(&"node_c".to_string()));
+        let start_node = planner.start_node.clone();
+        let nodes = planner.next_nodes(&start_node, &serde_json::Value::Null);
+
+        // Assertions to verify the correctness
+        assert_eq!(nodes.len(), 2);
+        assert_eq!(nodes[0].name, "process node1");
+        assert_eq!(nodes[1].name, "process node2");
     }
+
+    // 循环图（A -> B -> C -> A）
 }
