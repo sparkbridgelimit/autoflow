@@ -1,4 +1,7 @@
-use crate::{endpoint::EndpointRef, enums::{NodeType, Status}};
+use crate::{
+    endpoint::EndpointRef,
+    enums::{NodeType, Status},
+};
 use nanoid::nanoid;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -68,54 +71,7 @@ impl Node {
             extra: None,
         }
     }
-
-    // 获取输入端点
-    pub fn get_input(&self, index: i32) -> Option<&EndpointConfig> {
-        if index >= 0 && (index as usize) < self.inputs.len() {
-            Some(&self.inputs[index as usize])
-        } else {
-            None
-        }
-    }
-
-    // 获取输出端点
-    pub fn get_output(&self, index: i32) -> Option<&EndpointConfig> {
-        if index >= 0 && (index as usize) < self.outputs.len() {
-            Some(&self.outputs[index as usize])
-        } else {
-            None
-        }
-    }
-
-
-    // 获取输入端点引用
-    pub fn get_input_ref(&self, index: i32) -> Option<EndpointRef> {
-        if index >= 0 && (index as usize) < self.inputs.len() {
-            let endpoint_config = &self.inputs[index as usize];
-            Some(EndpointRef {
-                node_id: self.id.clone(),
-                endpoint_id: endpoint_config.id.clone(),
-            })
-        } else {
-            None
-        }
-    }
-
-    // 获取输出端点引用
-    pub fn get_output_ref(&self, index: i32) -> Option<EndpointRef> {
-        if index >= 0 && (index as usize) < self.outputs.len() {
-            let endpoint_config = &self.outputs[index as usize];
-            Some(EndpointRef {
-                node_id: self.id.clone(),
-                endpoint_id: endpoint_config.id.clone(),
-            })
-        } else {
-            None
-        }
-    }
 }
-
-
 
 pub trait NodeBuilderTrait {
     fn start(name: String) -> Self;
@@ -220,5 +176,58 @@ impl NodeTrait for Node {
     fn from_json(json: &Value) -> Result<Self, Box<dyn std::error::Error>> {
         let node: Node = serde_json::from_value(json.clone())?;
         Ok(node)
+    }
+}
+
+pub trait NodeAttrTrait {
+    fn get_input_ref(&self, index: i32) -> Option<EndpointRef>;
+    fn get_output_ref(&self, index: i32) -> Option<EndpointRef>;
+    fn get_input(&self, index: i32) -> Option<&EndpointConfig>;
+    fn get_output(&self, index: i32) -> Option<&EndpointConfig>;
+}
+
+impl NodeAttrTrait for Node {
+    // 获取输入端点
+    fn get_input(&self, index: i32) -> Option<&EndpointConfig> {
+        if index >= 0 && (index as usize) < self.inputs.len() {
+            Some(&self.inputs[index as usize])
+        } else {
+            None
+        }
+    }
+
+    // 获取输出端点
+    fn get_output(&self, index: i32) -> Option<&EndpointConfig> {
+        if index >= 0 && (index as usize) < self.outputs.len() {
+            Some(&self.outputs[index as usize])
+        } else {
+            None
+        }
+    }
+
+    // 获取输入端点引用
+    fn get_input_ref(&self, index: i32) -> Option<EndpointRef> {
+        if index >= 0 && (index as usize) < self.inputs.len() {
+            let endpoint_config = &self.inputs[index as usize];
+            Some(EndpointRef {
+                node_id: self.id.clone(),
+                endpoint_id: endpoint_config.id.clone(),
+            })
+        } else {
+            None
+        }
+    }
+
+    // 获取输出端点引用
+    fn get_output_ref(&self, index: i32) -> Option<EndpointRef> {
+        if index >= 0 && (index as usize) < self.outputs.len() {
+            let endpoint_config = &self.outputs[index as usize];
+            Some(EndpointRef {
+                node_id: self.id.clone(),
+                endpoint_id: endpoint_config.id.clone(),
+            })
+        } else {
+            None
+        }
     }
 }
