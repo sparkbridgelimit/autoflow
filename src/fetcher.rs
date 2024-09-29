@@ -1,12 +1,14 @@
 use std::{collections::VecDeque, sync::Mutex};
 
+use async_trait::async_trait;
 use once_cell::sync::Lazy;
 
 use crate::task::Task;
 
 
+#[async_trait]
 pub trait Fetcher {
-    fn fetch(&self) -> Vec<Task>;
+    async fn fetch(&self) -> Vec<Task>;
 }
 
 pub struct LocalQueue<T> {
@@ -42,8 +44,9 @@ pub static LOCAL_QUEUE_INSTANCE: Lazy<Mutex<LocalQueue<Task>>> =
 
 pub struct LocalQueueFetcher;
 
+#[async_trait]
 impl Fetcher for LocalQueueFetcher {
-    fn fetch(&self) -> Vec<Task> {
+    async fn fetch(&self) -> Vec<Task> {
         let mut queue = LOCAL_QUEUE_INSTANCE.lock().unwrap();
         if let Some(task) = queue.dequeue() {
             vec![task]

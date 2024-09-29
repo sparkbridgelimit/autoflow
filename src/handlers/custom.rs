@@ -1,18 +1,21 @@
+use async_trait::async_trait;
+
 use crate::handler2::TaskHandler;
 
 pub struct CustomTaskHandler {}
 
+#[async_trait]
 impl TaskHandler for CustomTaskHandler {
   
-    fn before(&self) {
+    async fn before(&self) {
         println!("开始处理任务");
     }
 
-    fn after(&self) {
+    async fn after(&self) {
         println!("完成任务");
     }
 
-    fn handle(&self) {
+    async fn handle(&self) {
         println!("正在处理任务数据");
     }
     
