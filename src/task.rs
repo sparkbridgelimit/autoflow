@@ -9,6 +9,7 @@ pub enum TaskStatus {
     Failed,
 }
 
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
 pub struct Task {
     // 当前任务要处理的数据
     pub data: serde_json::Value,

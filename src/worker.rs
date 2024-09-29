@@ -1,21 +1,19 @@
-use std::collections::HashMap;
+use crate::fetcher::Fetcher;
 
-use crate::{fetcher::Fetcher, task::Task};
-
-pub trait Handler {
-  fn handle(&self, task: &Task);
-}
-
-pub enum WorkerStatus {
-  Idle,
-  Busy,
-}
 
 pub struct Worker {
-  pub current_task: Option<Task>,
-  pub task_queue: Vec<Task>,
-  pub status: WorkerStatus,
-  pub manual: HashMap<String, Box<dyn Handler>>,
-  pub fetcher: Fetcher,
-}
+  // 当前执行的任务
+  // pub current_task: Option<Box<dyn Task>>,
 
+  // 任务队列
+  // pub task_queue: Vec<Box<dyn Task>>,
+
+  // 工人的状态
+  // pub status: WorkerStatus,
+
+  // 任务类型到处理器的映射
+  // pub handlers: HashMap<String, Box<dyn TaskHandler>>,
+
+  // 任务获取器
+  pub fetcher: Box<dyn Fetcher>,
+}
