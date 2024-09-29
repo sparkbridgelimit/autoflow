@@ -4,6 +4,7 @@ use once_cell::sync::Lazy;
 
 use crate::task::Task;
 
+
 pub trait Fetcher {
     fn fetch(&self) -> Vec<Task>;
 }
