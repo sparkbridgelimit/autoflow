@@ -9,9 +9,9 @@ use serde_json::Value;
 /// 表示节点在画布上的位置。
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Position {
-    pub x: i32,
-    pub y: i32,
-}
+    pub x: f64,  // x 坐标
+    pub y: f64,  // y 坐标
+  }  
 
 // 定义端点配置的结构体，用于表示输入和输出
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -47,6 +47,7 @@ pub struct Node {
     pub data_schema: serde_json::Value,
     pub data: serde_json::Value,
     pub data_ui_schema: serde_json::Value,
+    pub position: Position,
     pub component: String,
     pub executor_id: String,
     pub status: String,
@@ -69,6 +70,7 @@ impl Node {
             executor_id: String::default(),
             status: Status::Pending.code().to_string(),
             extra: None,
+            position: Position { x: 0.0, y: 0.0 },
         }
     }
 }
@@ -108,6 +110,7 @@ impl NodeBuilderTrait for Node {
             executor_id: String::default(),
             status: Status::Pending.code().to_string(),
             extra: None,
+            position: Position { x: 0.0, y: 0.0 },
         }
     }
 
@@ -138,6 +141,7 @@ impl NodeBuilderTrait for Node {
             executor_id: String::default(),
             status: Status::Pending.code().to_string(),
             extra: None,
+            position: Position { x: 0.0, y: 0.0 },
         }
     }
 
