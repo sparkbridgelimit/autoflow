@@ -1,5 +1,6 @@
 use std::{collections::HashMap, sync::Arc};
 
+use tokio::sync::mpsc;
 use tokio::sync::Mutex;
 
 use crate::{fetcher::Fetcher, handler2::TaskHandlerExec, task::Task};
@@ -13,9 +14,6 @@ pub enum WorkerStatus {
 pub struct Worker {
     // 当前执行的任务
     pub current_task: Option<Task>,
-
-    // 任务队列
-    pub task_queue: Arc<Mutex<Vec<Task>>>,
 
     // worker状态
     pub status: Arc<Mutex<WorkerStatus>>,
@@ -38,7 +36,6 @@ impl Worker {
     pub fn new(fetcher: Arc<dyn Fetcher + Send + Sync>) -> Self {
         Worker {
             current_task: None,
-            task_queue: Arc::new(Mutex::new(Vec::new())),
             status: Arc::new(Mutex::new(WorkerStatus::Idle)),
             handlers_map: HashMap::new(),
             fetcher,
@@ -68,62 +65,60 @@ impl Worker {
     }
 
     /// 异步从 Fetcher 中获取任务，并放入任务队列
-    pub async fn fetch(&self) {
+    pub async fn fetch(&self, tx: &mpsc::Sender<Task>) {
         let fetched_tasks = self.fetcher.fetch().await;
 
         if fetched_tasks.is_empty() {
             println!("暂时没有任务, 继续监听");
         } else {
-            let mut queue = self.task_queue.lock().await;
-            for task in fetched_tasks.into_iter() {
-                queue.push(task);
+            for task in fetched_tasks {
+                if let Err(_) = tx.send(task).await {
+                    println!("任务发送失败");
+                }
             }
             println!("任务已加入队列");
         }
     }
 
-    /// 异步从任务队列中执行任务
-    pub async fn execute(&self) {
-        let mut queue = self.task_queue.lock().await;
-
-        // 异步处理任务队列中的任务
-        while let Some(task) = queue.pop() {
-            let handler_map = self.handlers_map.clone();
-            let status = self.status.clone();
-
-            // 并发处理任务
-            if let Some(handler) = handler_map.get(&task.task_type) {
-                let handler = handler.clone();
-                tokio::spawn(async move {
-                    *status.lock().await = WorkerStatus::Busy;
-                    println!("开始处理任务: {:?}", task);
-                    handler.exec().await;
-                    *status.lock().await = WorkerStatus::Idle;
-                    println!("完成处理任务: {:?}", task);
-                });
-            } else {
-                println!("未找到任务类型为 '{}' 的处理器。", task.task_type);
-                return; // 找不到处理器时退出 while 循环
-            }
-        }
-    }
-
     /// 主循环，负责交替执行 fetch 和 execute
-    pub async fn run(&self) {
+    pub async fn run(&mut self) {
+        let (tx, mut rx) = mpsc::channel(100);
+
         let mut tasks_processed = 0;
 
         loop {
-            self.fetch().await;
-            self.execute().await;
-
-            tasks_processed += 1;
-
-            if tasks_processed >= self.task_limit {
-                println!("已处理 {} 个任务，退出循环", tasks_processed);
-                break;
+            let fetched_tasks = self.fetcher.fetch().await;
+            for task in fetched_tasks {
+                if tx.send(task).await.is_err() {
+                    println!("任务发送失败");
+                }
             }
 
-            tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+            // 异步接收任务并执行
+            while let Some(task) = rx.recv().await {
+                let handler_map = self.handlers_map.clone();
+                let status = self.status.clone();
+
+                // 根据任务类型执行对应的处理器
+                if let Some(handler) = handler_map.get(&task.task_type) {
+                    let handler = handler.clone();
+                    tokio::spawn(async move {
+                        *status.lock().await = WorkerStatus::Busy;
+                        println!("开始处理任务: {:?}", task);
+                        handler.exec().await;
+                        *status.lock().await = WorkerStatus::Idle;
+                        println!("完成处理任务: {:?}", task);
+                    });
+                } else {
+                    println!("未找到任务类型为 '{}' 的处理器。", task.task_type);
+                }
+
+                tasks_processed += 1;
+                if tasks_processed >= self.task_limit {
+                    println!("已处理 {} 个任务，退出循环", tasks_processed);
+                    return; // 达到任务限制，退出主循环
+                }
+            }
         }
     }
 }

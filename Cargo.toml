@@ -3,6 +3,9 @@ name = "autoflow"
 version = "0.1.0"
 edition = "2021"
 
+[workspace]
+members = ["codegen", "core", "schedule"]
+
 [dependencies]
 anyhow = "1.0.89"
 arrow = "53.0.0"

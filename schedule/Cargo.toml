@@ -1,0 +1,12 @@
+[package]
+name = "schedule"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+actix = "0.13.5"
+chrono = "0.4.38"
+cron = "0.12.1"
+
+[dev-dependencies]
+actix-rt = "2.6"

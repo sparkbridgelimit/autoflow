@@ -1,0 +1,16 @@
+[package]
+name = "codegen"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+proc-macro = true
+
+[features]
+default = ["compat-routing-macros-force-pub"]
+compat-routing-macros-force-pub = []
+
+[dependencies]
+proc-macro2 = "1"
+quote = "1"
+syn = { version = "2", features = ["full", "extra-traits"] }
