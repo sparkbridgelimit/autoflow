@@ -5,6 +5,14 @@ edition = "2021"
 
 [dependencies]
 actix = "0.13.5"
+actix-utils = "3.0.1"
+futures-core = { version = "0.3.31", default-features = false }
+log = "0.4.22"
 nanoid = "0.4.0"
+pin-project-lite = "0.2.15"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1.0.132"
+
+[dev-dependencies]
+actix-rt = "2.6"
+futures-util = { version = "0.3.31", default-features = false, features = ["std"] }
