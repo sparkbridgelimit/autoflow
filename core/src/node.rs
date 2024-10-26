@@ -9,9 +9,9 @@ use serde_json::Value;
 /// 表示节点在画布上的位置。
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Position {
-    pub x: f64,  // x 坐标
-    pub y: f64,  // y 坐标
-  }  
+    pub x: f64, // x 坐标
+    pub y: f64, // y 坐标
+}
 
 // 定义端点配置的结构体，用于表示输入和输出
 #[derive(Debug, Clone, Deserialize, Serialize)]
