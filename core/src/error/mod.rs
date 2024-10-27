@@ -6,3 +6,4 @@ mod status;
 
 pub(crate) use self::macros::{downcast_dyn, downcast_get_type_id};
 pub use self::{error::Error};
+pub use self::{workflow_error::WorkflowError};

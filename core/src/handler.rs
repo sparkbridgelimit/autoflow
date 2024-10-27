@@ -1,10 +1,40 @@
 use std::future::Future;
 
+use actix_service::{boxed, fn_service};
+
+use crate::{ extractor::FromContext, responder::Responder, response::TaskResponse, service::{BoxedHttpServiceFactory, ServiceRequest, ServiceResponse}};
+
 pub trait Handler<Args>: Clone + 'static {
     type Output;
     type Future: Future<Output = Self::Output>;
 
     fn call(&self, args: Args) -> Self::Future;
+}
+
+pub(crate) fn handler_service<F, Args>(handler: F) -> BoxedHttpServiceFactory
+where
+    F: Handler<Args>,
+    Args: FromContext,
+    F::Output: Responder,
+{
+    boxed::factory(fn_service(move |req: ServiceRequest| {
+        let handler = handler.clone();
+
+        async move {
+            let ctx = req.into_parts();
+
+            let res = match Args::from_context(&ctx).await {
+                Err(err) => TaskResponse::from_error(err),
+
+                Ok(data) => handler
+                    .call(data)
+                    .await
+                    .respond_to(&ctx)
+            };
+
+            Ok(ServiceResponse::new(ctx, res))
+        }
+    }))
 }
 
 macro_rules! factory_tuple ({ $($param:ident)* } => {
@@ -64,5 +94,10 @@ mod tests {
 
         assert_impl_handler(handler_min);
         assert_impl_handler(handler_max);
+    }
+
+    #[test]
+    fn test_handler_service () {
+
     }
 }
