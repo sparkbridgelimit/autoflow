@@ -518,6 +518,7 @@ dependencies = [
  "actix-rt",
  "actix-service",
  "actix-utils",
+ "ahash",
  "futures-core",
  "futures-util",
  "log",

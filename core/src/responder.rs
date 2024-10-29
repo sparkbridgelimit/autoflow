@@ -13,6 +13,8 @@ where
     type Output = T;
     
     fn respond_to(self, _ctx: &TaskContext) -> TaskResponse {
-        TaskResponse {}
+        TaskResponse {
+            message: String::default()
+        }
     }
 }

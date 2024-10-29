@@ -8,11 +8,11 @@ use crate::{
     context::TaskContext,
     error::Error,
     extractor::FromContext,
-    response::TaskResponse,
+    response::TaskResponse, router::ResourceDef,
 };
 
-pub(crate) type BoxedHttpService = BoxService<ServiceRequest, ServiceResponse, Error>;
-pub(crate) type BoxedHttpServiceFactory =
+pub(crate) type BoxedTaskService = BoxService<ServiceRequest, ServiceResponse, Error>;
+pub(crate) type BoxedTaskServiceFactory =
     BoxServiceFactory<(), ServiceRequest, ServiceResponse, Error, ()>;
 
 pub trait HttpServiceFactory {
@@ -63,8 +63,13 @@ impl ServiceRequest {
     }
 
     #[inline]
-    pub fn into_parts(self) -> (TaskContext) {
-        (self.ctx)
+    pub fn into_parts(self) -> TaskContext {
+        self.ctx
+    }
+
+    #[inline]
+    pub fn ctx(&self) -> &TaskContext {
+        &self.ctx
     }
 
     #[inline]
@@ -182,7 +187,12 @@ where
         > + 'static,
 {
     fn register(self, config: &mut AppService) {
-        config.register_service(self.srv)
+        let mut rdef = ResourceDef::new();
+        if let Some(ref name) = self.name {
+            rdef.set_name(name);
+        }
+
+        config.register_service(rdef, self.srv)
     }
 }
 

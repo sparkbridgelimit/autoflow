@@ -2,7 +2,12 @@ use std::future::Future;
 
 use actix_service::{boxed, fn_service};
 
-use crate::{ extractor::FromContext, responder::Responder, response::TaskResponse, service::{BoxedHttpServiceFactory, ServiceRequest, ServiceResponse}};
+use crate::{
+    extractor::FromContext,
+    responder::Responder,
+    response::TaskResponse,
+    service::{BoxedTaskServiceFactory, ServiceRequest, ServiceResponse},
+};
 
 pub trait Handler<Args>: Clone + 'static {
     type Output;
@@ -11,7 +16,7 @@ pub trait Handler<Args>: Clone + 'static {
     fn call(&self, args: Args) -> Self::Future;
 }
 
-pub(crate) fn handler_service<F, Args>(handler: F) -> BoxedHttpServiceFactory
+pub(crate) fn handler_service<F, Args>(handler: F) -> BoxedTaskServiceFactory
 where
     F: Handler<Args>,
     Args: FromContext,
@@ -25,11 +30,7 @@ where
 
             let res = match Args::from_context(&ctx).await {
                 Err(err) => TaskResponse::from_error(err),
-
-                Ok(data) => handler
-                    .call(data)
-                    .await
-                    .respond_to(&ctx)
+                Ok(data) => handler.call(data).await.respond_to(&ctx),
             };
 
             Ok(ServiceResponse::new(ctx, res))
@@ -96,8 +97,4 @@ mod tests {
         assert_impl_handler(handler_max);
     }
 
-    #[test]
-    fn test_handler_service () {
-
-    }
 }

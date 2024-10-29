@@ -1,93 +1,75 @@
-use std::time::Duration;
+use std::{cell::RefCell, rc::Rc};
 
-use actix::{Actor, ActorContext, Addr, Context, Handler, Message};
+use actix_service::{IntoServiceFactory, ServiceFactory};
 
-use crate::{task::Task, workflow::{TaskCompleted, Workflow}};
+use crate::{
+    error::Error, service::{AppServiceFactory, BoxedTaskServiceFactory, HttpServiceFactory, ServiceFactoryWrapper, ServiceRequest, ServiceResponse}, task::Task, worker_service::{WorkerEntry, WorkerInit, WorkerRoutingFactory}
+};
 
-/// Worker struct responsible for executing tasks within a workflow.
-pub struct Worker {
-    /// Address of the Workflow actor to notify upon task completion.
-    workflow: Addr<Workflow>,
+pub struct Worker<T> {
+    endpoint: T,
+    services: Vec<Box<dyn AppServiceFactory>>,
+    default: Option<Rc<BoxedTaskServiceFactory>>,
+    factory_ref: Rc<RefCell<Option<WorkerRoutingFactory>>>,
 }
 
-impl Worker {
-    /// Creates a new Worker instance with a reference to the Workflow actor.
-    pub fn new(workflow: Addr<Workflow>) -> Self {
-        Self { workflow }
-    }
+impl Worker<WorkerEntry> {
+    #[allow(clippy::new_without_default)]
+    pub fn new() -> Self {
+        let factory_ref = Rc::new(RefCell::new(None));
 
-    /// Starts the worker to process incoming tasks.
-    pub fn execute(&self, task: Task) {
-        println!("Worker received a new task to execute: {:?}", task);
-        // Simulate task execution with a delay
-        let workflow: Addr<Workflow> = self.workflow.clone();
-        actix::spawn(async move {
-            // Simulated task execution duration
-            actix::clock::sleep(Duration::from_secs(2)).await;
-            // Notify workflow of task completion
-            workflow.do_send(TaskCompleted(task));
-        });
+        Worker {
+            endpoint: WorkerEntry::new(Rc::clone(&factory_ref)),
+            services: Vec::new(),
+            default: None,
+            factory_ref,
+        }
     }
 }
 
-impl Actor for Worker {
-    type Context = Context<Self>;
-
-    fn started(&mut self, _: &mut Self::Context) {
-        println!("Worker started");
-    }
-
-    fn stopped(&mut self, _: &mut Self::Context) {
-        println!("Worker stopped");
-    }
-}
-
-/// Message sent to Worker to execute a specific task.
-pub struct WorkerMessage {
-    pub task: Task,
-}
-
-impl Message for WorkerMessage {
-    type Result = ();
-}
-
-impl Handler<WorkerMessage> for Worker {
-    type Result = ();
-
-    fn handle(&mut self, msg: WorkerMessage, _: &mut Self::Context) {
-        println!("Worker is processing task: {:?}", msg.task);
-        // 启动任务处理流程
-        self.execute(msg.task);
+impl<T> Worker<T>
+where
+    T: ServiceFactory<ServiceRequest, Config = (), Error = Error, InitError = ()>,
+{
+    pub fn service<F>(mut self, factory: F) -> Self
+    where
+        F: HttpServiceFactory + 'static,
+    {
+        self.services.push(Box::new(ServiceFactoryWrapper::new(factory)));
+        self
     }
 }
 
-/// Message to start the Worker.
-pub struct Start;
-
-impl Message for Start {
-    type Result = ();
-}
-
-impl Handler<Start> for Worker {
-    type Result = ();
-
-    fn handle(&mut self, _: Start, _: &mut Self::Context) {
-        println!("Worker started processing tasks.");
+impl<T> IntoServiceFactory<WorkerInit<T>, Task> for Worker<T>
+where
+    T: ServiceFactory<
+            ServiceRequest,
+            Config = (),
+            Response = ServiceResponse,
+            Error = Error,
+            InitError = (),
+        > + 'static,
+{
+    fn into_factory(self) -> WorkerInit<T> {
+        WorkerInit {
+            endpoint: self.endpoint,
+            services: Rc::new(RefCell::new(self.services)),
+            default: self.default,
+            factory_ref: self.factory_ref,
+        }
     }
 }
 
-/// Message to stop the Worker.
-pub struct Stop;
 
-impl Message for Stop {
-    type Result = ();
-}
+#[cfg(test)]
+mod tests {
 
-impl Handler<Stop> for Worker {
-    type Result = ();
+    use super::*;
 
-    fn handle(&mut self, _: Stop, ctx: &mut Self::Context) {
-        println!("Worker is stopping.");
-        ctx.stop();
+
+    #[test]
+    fn arg_number() {
+
     }
+
 }

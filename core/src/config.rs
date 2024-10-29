@@ -4,22 +4,30 @@ use actix_service::{boxed, IntoServiceFactory, ServiceFactory};
 
 use crate::{
     error::Error,
-    service::{BoxedHttpServiceFactory, ServiceRequest, ServiceResponse},
+    router::ResourceDef,
+    service::{BoxedTaskServiceFactory, ServiceRequest, ServiceResponse},
 };
 
-#[derive(Debug, Clone)]
-pub struct AppConfig {}
-
 pub struct AppService {
-    config: AppConfig,
-    root: bool,
-    default: Rc<BoxedHttpServiceFactory>,
+    default: Rc<BoxedTaskServiceFactory>,
     #[allow(clippy::type_complexity)]
-    services: Vec<BoxedHttpServiceFactory>,
+    services: Vec<(ResourceDef, BoxedTaskServiceFactory)>,
 }
 
 impl AppService {
-    pub fn register_service<F, S>(&mut self, factory: F)
+    pub(crate) fn new(default: Rc<BoxedTaskServiceFactory>) -> Self {
+        AppService {
+            default,
+            services: Vec::new(),
+        }
+    }
+
+    #[allow(clippy::type_complexity)]
+    pub(crate) fn into_services(self) -> Vec<(ResourceDef, BoxedTaskServiceFactory)> {
+        self.services
+    }
+
+    pub fn register_service<F, S>(&mut self, rdef: ResourceDef, factory: F)
     where
         F: IntoServiceFactory<S, ServiceRequest>,
         S: ServiceFactory<
@@ -30,6 +38,7 @@ impl AppService {
                 InitError = (),
             > + 'static,
     {
-        self.services.push(boxed::factory(factory.into_factory()));
+        self.services
+            .push((rdef, boxed::factory(factory.into_factory())));
     }
 }
