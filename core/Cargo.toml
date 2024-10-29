@@ -8,6 +8,7 @@ misc = { path = "../misc" }
 actix = "0.13.5"
 actix-utils = "3.0.1"
 futures-core = { version = "0.3.31", default-features = false }
+futures-util = { version = "0.3.31", default-features = false, features = ["std"] }
 log = "0.4.22"
 nanoid = "0.4.0"
 pin-project-lite = "0.2.15"
@@ -18,4 +19,3 @@ ahash = "0.8.11"
 
 [dev-dependencies]
 actix-rt = "2.6"
-futures-util = { version = "0.3.31", default-features = false, features = ["std"] }

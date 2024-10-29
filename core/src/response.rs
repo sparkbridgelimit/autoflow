@@ -6,6 +6,15 @@ pub struct TaskResponse {
 
 impl TaskResponse {
     #[inline]
+    pub fn new() -> Self {
+        Self {
+            message: String::default()
+        }
+    }
+}
+
+impl TaskResponse {
+    #[inline]
     pub fn from_error(_error: impl Into<Error>) -> Self {
         Self {
             message: String::default()

@@ -54,6 +54,9 @@ pub struct TaskRouter<T> {
 }
 
 impl<T> TaskRouter<T> {
+    pub fn build() -> RouterBuilder<T> {
+        RouterBuilder { routes: Vec::new() }
+    }
     pub fn recognize(&self, req: &ServiceRequest) -> Option<&T> {
         let ctx: &crate::context::TaskContext = req.ctx();
         let name = ctx.name();
@@ -64,6 +67,31 @@ impl<T> TaskRouter<T> {
                 None
             }
         })
+    }
+}
+
+pub struct RouterBuilder<T> {
+    routes: Vec<(ResourceDef, T)>,
+}
+
+impl<T> RouterBuilder<T> {
+    pub fn push(
+        &mut self,
+        rdef: ResourceDef,
+        val: T,
+    ) -> (&mut ResourceDef, &mut T) {
+        self.routes.push((rdef, val));
+        #[allow(clippy::map_identity)] // map is used to distribute &mut-ness to tuple elements
+        self.routes
+            .last_mut()
+            .map(|(rdef, val)| (rdef, val))
+            .unwrap()
+    }
+
+    pub fn finish(self) -> TaskRouter<T> {
+        TaskRouter {
+            routes: self.routes,
+        }
     }
 }
 

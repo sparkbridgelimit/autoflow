@@ -2,6 +2,7 @@ use std::{cell::RefCell, mem, rc::Rc};
 
 use actix_service::{boxed, fn_service, Service, ServiceFactory};
 use futures_core::future::LocalBoxFuture;
+use futures_util::future::join_all;
 
 use crate::{
     config::AppService, context::TaskContext, error::Error, response::TaskResponse, router::{ResourceDef, TaskRouter}, service::{
@@ -10,7 +11,7 @@ use crate::{
     }, task::Task
 };
 
-pub struct WorkerInit<T>
+pub struct WorkerFactory<T>
 where
     T: ServiceFactory<
         ServiceRequest,
@@ -26,7 +27,7 @@ where
     pub(crate) factory_ref: Rc<RefCell<Option<WorkerRoutingFactory>>>,
 }
 
-impl<T> ServiceFactory<Task> for WorkerInit<T>
+impl<T> ServiceFactory<Task> for WorkerFactory<T>
 where
     T: ServiceFactory<
         ServiceRequest,
@@ -40,12 +41,11 @@ where
     type Response = ServiceResponse;
     type Error = T::Error;
     type Config = ();
-    type Service = WorkerInitService<T::Service>;
+    type Service = WorkerService<T::Service>;
     type InitError = T::InitError;
     type Future = LocalBoxFuture<'static, Result<Self::Service, Self::InitError>>;
 
     fn new_service(&self, _: ()) -> Self::Future {
-        // 没有handler的时候默认调用的函数
         let default = self.default.clone().unwrap_or_else(|| {
             Rc::new(boxed::factory(fn_service(|req: ServiceRequest| async {
                 Ok(ServiceResponse::new(
@@ -82,21 +82,21 @@ where
         Box::pin(async move {
             let service = endpoint_fut.await?;
 
-            Ok(WorkerInitService {
+            Ok(WorkerService {
                 service,
             })
         })
     }
 }
 
-pub struct WorkerInitService<T>
+pub struct WorkerService<T>
 where
     T: Service<ServiceRequest, Response = ServiceResponse, Error = Error>,
 {
     service: T,
 }
 
-impl<T> Service<Task> for WorkerInitService<T>
+impl<T> Service<Task> for WorkerService<T>
 where
     T: Service<ServiceRequest, Response = ServiceResponse, Error = Error>,
 {
@@ -140,6 +140,48 @@ pub struct WorkerRoutingFactory {
     default: Rc<BoxedTaskServiceFactory>,
 }
 
+impl ServiceFactory<ServiceRequest> for WorkerRoutingFactory {
+    type Response = ServiceResponse;
+    type Error = Error;
+    type Config = ();
+    type Service = WorkerRouting;
+    type InitError = ();
+    type Future = LocalBoxFuture<'static, Result<Self::Service, Self::InitError>>;
+
+    fn new_service(&self, _: ()) -> Self::Future {
+        let factory_fut = join_all(self.services.iter().map(|(path, factory)| {
+            let path = path.clone();
+            let factory_fut = factory.new_service(());
+            async move {
+                factory_fut
+                    .await
+                    .map(move |service| (path, service))
+            }
+        }));
+
+        // construct default service factory future
+        let default_fut = self.default.new_service(());
+
+        Box::pin(async move {
+            let default = default_fut.await?;
+
+            // build router from the factory future result.
+            let router = factory_fut
+                .await
+                .into_iter()
+                .collect::<Result<Vec<_>, _>>()?
+                .drain(..)
+                .fold(TaskRouter::build(), |mut router, (path, service)| {
+                    router.push(path, service);
+                    router
+                })
+                .finish();
+
+            Ok(WorkerRouting { router, default })
+        })
+    }
+}
+
 pub struct WorkerEntry {
     factory: Rc<RefCell<Option<WorkerRoutingFactory>>>,
 }
@@ -147,5 +189,18 @@ pub struct WorkerEntry {
 impl WorkerEntry {
     pub fn new(factory: Rc<RefCell<Option<WorkerRoutingFactory>>>) -> Self {
         WorkerEntry { factory }
+    }
+}
+
+impl ServiceFactory<ServiceRequest> for WorkerEntry {
+    type Response = ServiceResponse;
+    type Error = Error;
+    type Config = ();
+    type Service = WorkerRouting;
+    type InitError = ();
+    type Future = LocalBoxFuture<'static, Result<Self::Service, Self::InitError>>;
+
+    fn new_service(&self, _: ()) -> Self::Future {
+        self.factory.borrow_mut().as_mut().unwrap().new_service(())
     }
 }

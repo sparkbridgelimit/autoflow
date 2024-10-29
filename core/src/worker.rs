@@ -3,7 +3,13 @@ use std::{cell::RefCell, rc::Rc};
 use actix_service::{IntoServiceFactory, ServiceFactory};
 
 use crate::{
-    error::Error, service::{AppServiceFactory, BoxedTaskServiceFactory, HttpServiceFactory, ServiceFactoryWrapper, ServiceRequest, ServiceResponse}, task::Task, worker_service::{WorkerEntry, WorkerInit, WorkerRoutingFactory}
+    error::Error,
+    service::{
+        AppServiceFactory, BoxedTaskServiceFactory, HttpServiceFactory, ServiceFactoryWrapper,
+        ServiceRequest, ServiceResponse,
+    },
+    task::Task,
+    worker_service::{WorkerEntry, WorkerFactory, WorkerRoutingFactory},
 };
 
 pub struct Worker<T> {
@@ -35,12 +41,13 @@ where
     where
         F: HttpServiceFactory + 'static,
     {
-        self.services.push(Box::new(ServiceFactoryWrapper::new(factory)));
+        self.services
+            .push(Box::new(ServiceFactoryWrapper::new(factory)));
         self
     }
 }
 
-impl<T> IntoServiceFactory<WorkerInit<T>, Task> for Worker<T>
+impl<T> IntoServiceFactory<WorkerFactory<T>, Task> for Worker<T>
 where
     T: ServiceFactory<
             ServiceRequest,
@@ -50,8 +57,8 @@ where
             InitError = (),
         > + 'static,
 {
-    fn into_factory(self) -> WorkerInit<T> {
-        WorkerInit {
+    fn into_factory(self) -> WorkerFactory<T> {
+        WorkerFactory {
             endpoint: self.endpoint,
             services: Rc::new(RefCell::new(self.services)),
             default: self.default,
@@ -60,16 +67,22 @@ where
     }
 }
 
-
 #[cfg(test)]
 mod tests {
+    use actix_service::{IntoServiceFactory, ServiceFactory};
 
-    use super::*;
+    use crate::{responder::Responder, response::TaskResponse, web};
 
+    use super::Worker;
 
-    #[test]
-    fn arg_number() {
-
+    pub async fn hello () -> impl Responder {
+        Ok(())
     }
-
+    
+    #[actix_rt::test]
+    async fn test_default_resource() {
+        let app = Worker::new().service(web::resource("hello").to(hello));
+        let factory = app.into_factory();
+        let srv = factory.new_service(()).await;
+    }
 }
