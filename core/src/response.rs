@@ -21,3 +21,11 @@ impl TaskResponse {
         }
     }
 }
+
+impl std::fmt::Debug for TaskResponse {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("TaskResponse")
+            .field("message", &self.message)
+            .finish()
+    }
+}

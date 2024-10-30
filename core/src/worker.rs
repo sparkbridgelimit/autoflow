@@ -69,9 +69,11 @@ where
 
 #[cfg(test)]
 mod tests {
-    use actix_service::{IntoServiceFactory, ServiceFactory};
+    use std::time::Instant;
 
-    use crate::{responder::Responder, response::TaskResponse, web};
+    use actix_service::{IntoServiceFactory, Service, ServiceFactory};
+
+    use crate::{responder::Responder, task::Task, web};
 
     use super::Worker;
 
@@ -83,6 +85,28 @@ mod tests {
     async fn test_default_resource() {
         let app = Worker::new().service(web::resource("hello").to(hello));
         let factory = app.into_factory();
-        let srv = factory.new_service(()).await;
+        let srv = factory.new_service(()).await.unwrap();
+        let task = Task::new();
+        let resp = srv.call(task).await.unwrap();
+        println!("{:?}", resp.response());
     }
+
+    #[actix_rt::test]
+async fn test_cost() {
+    // 记录开始时间
+    let start = Instant::now();
+
+    let app = Worker::new().service(web::resource("hello").to(hello));
+    let factory = app.into_factory();
+    let srv = factory.new_service(()).await.unwrap();
+    let task = Task::new();
+    let resp = srv.call(task).await.unwrap();
+
+    // 打印响应结果
+    println!("{:?}", resp.response());
+
+    // 记录结束时间并计算耗时
+    let duration = start.elapsed();
+    println!("请求耗时: {:?}", duration);
+}
 }

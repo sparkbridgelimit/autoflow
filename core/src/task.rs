@@ -11,20 +11,20 @@ pub enum TaskStatus {
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
 pub struct Task {
-    pub task_type: String,
+    // pub task_type: String,
     // 当前任务要处理的数据
-    pub data: serde_json::Value,
+    // pub data: serde_json::Value,
     // 当前任务状态
-    pub status: TaskStatus,
+    // pub status: TaskStatus,
 }
 
 impl Task {
     // 新建任务的构造函数
-    pub fn new(task_type: String, data: serde_json::Value) -> Self {
+    pub fn new() -> Self {
         Task {
-            task_type,
-            data,
-            status: TaskStatus::Queued,
+            // task_type,
+            // data,
+            // status: TaskStatus::Queued,
         }
     }
 }
