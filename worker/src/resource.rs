@@ -5,7 +5,6 @@ use actix_service::{
     fn_service, Service, ServiceFactory,
 };
 use futures_core::future::LocalBoxFuture;
-use futures_util::future::join_all;
 
 use crate::{
     config::AppService, error::Error, extractor::FromContext, handler::Handler, responder::Responder, response::TaskResponse, route::{Route, RouteService}, router::ResourceDef, service::{BoxedTaskService, BoxedTaskServiceFactory, HttpServiceFactory, ServiceRequest, ServiceResponse}
@@ -36,20 +35,19 @@ impl ServiceFactory<ServiceRequest> for ResourceEndpoint {
 
 pub struct Resource<T = ResourceEndpoint> {
     endpoint: T,
-    // rdef: Patterns,
     name: Option<String>,
-    routes: Vec<Route>,
+    route: Option<Route>,
     default: BoxedTaskServiceFactory,
     factory_ref: Rc<RefCell<Option<ResourceFactory>>>,
 }
 
 impl Resource {
-    pub fn new(path: &str) -> Resource {
+    pub fn new(task_name: &str) -> Resource {
         let factory_ref = Rc::new(RefCell::new(None));
 
         Resource {
-            routes: Vec::new(),
-            name: Some(path.to_string()),
+            route: None,
+            name: Some(task_name.to_owned()),
             endpoint: ResourceEndpoint::new(Rc::clone(&factory_ref)),
             factory_ref,
             default: boxed::factory(fn_service(|req: ServiceRequest| async {
@@ -66,7 +64,7 @@ impl Resource {
         Args: FromContext + 'static,
         F::Output: Responder + 'static,
     {
-        self.routes.push(Route::new().to(handler));
+        self.route = Some(Route::new().to(handler));
         self
     }
 }
@@ -89,7 +87,7 @@ where
         }
 
         *self.factory_ref.borrow_mut() = Some(ResourceFactory {
-            routes: self.routes,
+            route: self.route,
             default: self.default,
         });
 
@@ -98,7 +96,7 @@ where
 }
 
 pub struct ResourceFactory {
-    routes: Vec<Route>,
+    route: Option<Route>,
     default: BoxedTaskServiceFactory,
 }
 
@@ -113,22 +111,22 @@ impl ServiceFactory<ServiceRequest> for ResourceFactory {
     fn new_service(&self, _: ()) -> Self::Future {
         let default_fut = self.default.new_service(());
 
-        let factory_fut = join_all(self.routes.iter().map(|route| route.new_service(())));
+        let route_fut = self.route.as_ref().map(|route| route.new_service(()));
 
         Box::pin(async move {
             let default = default_fut.await?;
-            let routes = factory_fut
-                .await
-                .into_iter()
-                .collect::<Result<Vec<_>, _>>()?;
+            let route = match route_fut {
+                Some(fut) => Some(fut.await?),
+                None => None,
+            };
 
-            Ok(ResourceService { routes, default })
+            Ok(ResourceService { route, default })
         })
     }
 }
 
 pub struct ResourceService {
-    routes: Vec<RouteService>,
+    route: Option<RouteService>,
     default: BoxedTaskService,
 }
 
@@ -139,13 +137,11 @@ impl Service<ServiceRequest> for ResourceService {
 
     actix_service::always_ready!();
 
-    fn call(&self, mut req: ServiceRequest) -> Self::Future {
-        for route in &self.routes {
-            if route.check(&mut req) {
-                return route.call(req);
-            }
+    fn call(&self, req: ServiceRequest) -> Self::Future {
+        if let Some(route) = &self.route {
+            route.call(req)
+        } else {
+            self.default.call(req)
         }
-
-        self.default.call(req)
     }
 }

@@ -1,14 +1,14 @@
 use crate::error::Error;
 
 pub struct TaskResponse {
-    pub message: String
+    pub message: String,
 }
 
 impl TaskResponse {
     #[inline]
     pub fn new() -> Self {
         Self {
-            message: String::default()
+            message: String::default(),
         }
     }
 }
@@ -17,8 +17,15 @@ impl TaskResponse {
     #[inline]
     pub fn from_error(_error: impl Into<Error>) -> Self {
         Self {
-            message: String::default()
+            message: String::default(),
         }
+    }
+
+    pub fn from<T>(res: TaskResponse) -> Self
+    where
+        T: std::fmt::Display,
+    {
+
     }
 }
 

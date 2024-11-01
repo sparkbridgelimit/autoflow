@@ -11,7 +11,7 @@ pub enum TaskStatus {
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
 pub struct Task {
-    // pub task_type: String,
+    pub name: String,
     // 当前任务要处理的数据
     // pub data: serde_json::Value,
     // 当前任务状态
@@ -20,11 +20,9 @@ pub struct Task {
 
 impl Task {
     // 新建任务的构造函数
-    pub fn new() -> Self {
+    pub fn new(name: &str) -> Self {
         Task {
-            // task_type,
-            // data,
-            // status: TaskStatus::Queued,
+            name: name.to_owned(),
         }
     }
 }

@@ -19,7 +19,7 @@ impl TaskContext {
     #[inline]
     pub(crate) fn new(name: &str) -> TaskContext {
         TaskContext {
-            inner: Rc::new(TaskContextInner { name: name.to_string() }),
+            inner: Rc::new(TaskContextInner { name: name.to_owned() }),
         }
     }
 }

@@ -10,7 +10,6 @@ pub struct Route {
 }
 
 impl Route {
-    #[allow(clippy::new_without_default)]
     pub fn new() -> Route {
         Route {
             service: boxed::factory(fn_service(|req: ServiceRequest| async {

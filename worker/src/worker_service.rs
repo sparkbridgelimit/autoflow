@@ -107,8 +107,8 @@ where
     actix_service::forward_ready!(service);
 
     // 将原始的req转成ServiceReq
-    fn call(&self, _req: Task) -> Self::Future {
-        let ctx = TaskContext::new("");
+    fn call(&self, req: Task) -> Self::Future {
+        let ctx = TaskContext::new(req.name.as_str());
         self.service.call(ServiceRequest::new(ctx))
     }
 }

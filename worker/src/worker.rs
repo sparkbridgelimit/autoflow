@@ -77,36 +77,37 @@ mod tests {
 
     use super::Worker;
 
-    pub async fn hello () -> impl Responder {
-        Ok(())
+    pub async fn hello() -> impl Responder {
+        Ok("world")
     }
-    
+
     #[actix_rt::test]
     async fn test_default_resource() {
-        let app = Worker::new().service(web::resource("hello").to(hello));
+        let app = Worker::new().service(web::resource("hello_task").to(hello));
         let factory = app.into_factory();
         let srv = factory.new_service(()).await.unwrap();
-        let task = Task::new();
+        let task = Task::new("hello_task");
         let resp = srv.call(task).await.unwrap();
         println!("{:?}", resp.response());
     }
 
     #[actix_rt::test]
-async fn test_cost() {
-    // 记录开始时间
-    let start = Instant::now();
+    async fn test_cost() {
+        // 记录开始时间
+        let start = Instant::now();
 
-    let app = Worker::new().service(web::resource("hello").to(hello));
-    let factory = app.into_factory();
-    let srv = factory.new_service(()).await.unwrap();
-    let task = Task::new();
-    let resp = srv.call(task).await.unwrap();
+        let app = Worker::new().service(web::resource("hello").to(hello));
+        let factory = app.into_factory();
+        let srv = factory.new_service(()).await.unwrap();
+        let task = Task::new("hello_task");
+        let task = Task::new("");
+        let resp = srv.call(task).await.unwrap();
 
-    // 打印响应结果
-    println!("{:?}", resp.response());
+        // 打印响应结果
+        println!("{:?}", resp.response());
 
-    // 记录结束时间并计算耗时
-    let duration = start.elapsed();
-    println!("请求耗时: {:?}", duration);
-}
+        // 记录结束时间并计算耗时
+        let duration = start.elapsed();
+        println!("请求耗时: {:?}", duration);
+    }
 }
