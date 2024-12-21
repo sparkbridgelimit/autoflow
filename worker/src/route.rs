@@ -13,7 +13,7 @@ impl Route {
     pub fn new() -> Route {
         Route {
             service: boxed::factory(fn_service(|req: ServiceRequest| async {
-                Ok(req.into_response(TaskResponse::new()))
+                Ok(req.into_response(TaskResponse::success(serde_json::Value::Null)))
             })),
         }
     }
@@ -55,7 +55,8 @@ pub struct RouteService {
 
 impl RouteService {
     #[allow(clippy::needless_pass_by_ref_mut)]
-    pub fn check(&self, req: &mut ServiceRequest) -> bool {
+    pub fn check(&self, _: &mut ServiceRequest) -> bool {
+        // TODO
         true
     }
 }

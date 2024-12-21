@@ -51,7 +51,7 @@ impl Resource {
             endpoint: ResourceEndpoint::new(Rc::clone(&factory_ref)),
             factory_ref,
             default: boxed::factory(fn_service(|req: ServiceRequest| async {
-                Ok(req.into_response(TaskResponse::new()))
+                Ok(req.into_response(TaskResponse::success(serde_json::Value::Null)))
             })),
         }
     }

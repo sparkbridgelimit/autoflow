@@ -29,7 +29,7 @@ where
             let ctx = req.into_parts();
 
             let res = match Args::from_context(&ctx).await {
-                Err(err) => TaskResponse::from_error(err),
+                Err(err) => TaskResponse::from_error(err.into()),
                 Ok(data) => handler.call(data).await.respond_to(&ctx),
             };
 

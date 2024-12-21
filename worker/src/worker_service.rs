@@ -50,9 +50,7 @@ where
             Rc::new(boxed::factory(fn_service(|req: ServiceRequest| async {
                 Ok(ServiceResponse::new(
                     req.into_parts(),
-                    TaskResponse {
-                        message: "".to_string(),
-                    },
+                    TaskResponse::success(serde_json::Value::Null),
                 ))
             })))
         });

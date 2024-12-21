@@ -16,3 +16,19 @@ where
         TaskResponse::from(self)
     }
 }
+
+impl<T> From<Result<T, Error>> for TaskResponse
+where
+    T: std::fmt::Display,
+{
+    fn from(res: Result<T, Error>) -> Self {
+        match res {
+            Ok(val) => {
+                TaskResponse::success(serde_json::json!(val.to_string()))
+            }
+            Err(e) => {
+                TaskResponse::from_error(e)
+            }
+        }
+    }
+}
