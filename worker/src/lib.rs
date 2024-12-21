@@ -4,6 +4,7 @@ pub mod edge;
 pub mod endpoint;
 pub mod enums;
 pub mod task;
+pub mod task_registry;
 pub mod handler;
 pub mod extractor;
 pub mod context;

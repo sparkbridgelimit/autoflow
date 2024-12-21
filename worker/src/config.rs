@@ -11,7 +11,7 @@ use crate::{
 pub struct AppService {
     default: Rc<BoxedTaskServiceFactory>,
     #[allow(clippy::type_complexity)]
-    services: Vec<(ResourceDef, BoxedTaskServiceFactory)>,
+    services: Vec<(ResourceDef, Rc<BoxedTaskServiceFactory>)>,
 }
 
 impl AppService {
@@ -22,23 +22,24 @@ impl AppService {
         }
     }
 
-    #[allow(clippy::type_complexity)]
-    pub(crate) fn into_services(self) -> Vec<(ResourceDef, BoxedTaskServiceFactory)> {
-        self.services
+    pub fn into_services(
+        self,
+    ) -> (
+        Rc<BoxedTaskServiceFactory>,
+        Vec<(ResourceDef, Rc<BoxedTaskServiceFactory>)>,
+    ) {
+        (self.default, self.services)
     }
 
     pub fn register_service<F, S>(&mut self, rdef: ResourceDef, factory: F)
     where
         F: IntoServiceFactory<S, ServiceRequest>,
-        S: ServiceFactory<
-                ServiceRequest,
-                Response = ServiceResponse,
-                Error = Error,
-                Config = (),
-                InitError = (),
-            > + 'static,
+        S: ServiceFactory<ServiceRequest, Response = ServiceResponse, Error = Error, Config = (), InitError = ()> + 'static,
     {
-        self.services
-            .push((rdef, boxed::factory(factory.into_factory())));
+        let bfactory = boxed::factory(factory.into_factory());
+        // wrap it
+        let rc_factory = Rc::new(bfactory);
+
+        self.services.push((rdef, rc_factory));
     }
 }

@@ -9,26 +9,22 @@ use crate::{
         ServiceRequest, ServiceResponse,
     },
     task::Task,
-    worker_service::{WorkerEntry, WorkerFactory, WorkerRoutingFactory},
+    worker_service::WorkerFactory,
 };
 
 pub struct Worker<T> {
     endpoint: T,
     services: Vec<Box<dyn AppServiceFactory>>,
     default: Option<Rc<BoxedTaskServiceFactory>>,
-    factory_ref: Rc<RefCell<Option<WorkerRoutingFactory>>>,
 }
 
-impl Worker<WorkerEntry> {
+impl Worker<()> {
     #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
-        let factory_ref = Rc::new(RefCell::new(None));
-
         Worker {
-            endpoint: WorkerEntry::new(Rc::clone(&factory_ref)),
+            endpoint: (),
             services: Vec::new(),
             default: None,
-            factory_ref,
         }
     }
 }
@@ -37,16 +33,24 @@ impl<T> Worker<T>
 where
     T: ServiceFactory<ServiceRequest, Config = (), Error = Error, InitError = ()>,
 {
+    /// 向 Worker 注册一个实现了 HttpServiceFactory 的“资源”
+    /// （典型场景：web::resource("task_name").to(handler)）
     pub fn service<F>(mut self, factory: F) -> Self
     where
         F: HttpServiceFactory + 'static,
     {
-        self.services
-            .push(Box::new(ServiceFactoryWrapper::new(factory)));
+        self.services.push(Box::new(ServiceFactoryWrapper::new(factory)));
+        self
+    }
+
+    /// 如果需要设置一个 default service
+    pub fn default_service(mut self, default: Rc<BoxedTaskServiceFactory>) -> Self {
+        self.default = Some(default);
         self
     }
 }
 
+/// 将 Worker<T> 转换为 `WorkerFactory<T>`，它实现了 `ServiceFactory<Task>`
 impl<T> IntoServiceFactory<WorkerFactory<T>, Task> for Worker<T>
 where
     T: ServiceFactory<
@@ -62,7 +66,6 @@ where
             endpoint: self.endpoint,
             services: Rc::new(RefCell::new(self.services)),
             default: self.default,
-            factory_ref: self.factory_ref,
         }
     }
 }
