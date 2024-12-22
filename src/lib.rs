@@ -20,4 +20,3 @@ pub mod fetcher;
 pub mod task;
 pub mod handlers;
 pub mod reactflow;
-pub mod commander;

@@ -5,44 +5,29 @@ use futures_core::future::LocalBoxFuture;
 use futures_util::future::join_all;
 
 use crate::{
-    config::AppService, context::TaskContext, error::Error, response::TaskResponse, router::{ResourceDef, TaskRouter}, service::{
+    config::AppService,
+    context::TaskContext,
+    error::Error,
+    response::TaskResponse,
+    router::{ResourceDef, TaskRouter},
+    service::{
         AppServiceFactory, BoxedTaskService, BoxedTaskServiceFactory, ServiceRequest,
         ServiceResponse,
-    }, task::Task
+    },
+    task::Task,
 };
 
-pub struct WorkerFactory<T>
-where
-    T: ServiceFactory<
-        ServiceRequest,
-        Config = (),
-        Response = ServiceResponse,
-        Error = Error,
-        InitError = (),
-    >,
-{
-    pub(crate) endpoint: T,
+pub struct WorkerFactory {
     pub(crate) services: Rc<RefCell<Vec<Box<dyn AppServiceFactory>>>>,
     pub(crate) default: Option<Rc<BoxedTaskServiceFactory>>,
-    pub(crate) factory_ref: Rc<RefCell<Option<WorkerRoutingFactory>>>,
 }
 
-impl<T> ServiceFactory<Task> for WorkerFactory<T>
-where
-    T: ServiceFactory<
-        ServiceRequest,
-        Config = (),
-        Response = ServiceResponse,
-        Error = Error,
-        InitError = (),
-    >,
-    T::Future: 'static,
-{
+impl ServiceFactory<Task> for WorkerFactory {
     type Response = ServiceResponse;
-    type Error = T::Error;
+    type Error = Error;
     type Config = ();
-    type Service = WorkerService<T::Service>;
-    type InitError = T::InitError;
+    type Service = WorkerService;
+    type InitError = ();
     type Future = LocalBoxFuture<'static, Result<Self::Service, Self::InitError>>;
 
     fn new_service(&self, _: ()) -> Self::Future {
@@ -65,49 +50,37 @@ where
 
         let services = config.into_services();
 
-        *self.factory_ref.borrow_mut() = Some(WorkerRoutingFactory {
-            default,
-            services: services
-                .into_iter()
-                .collect::<Vec<_>>()
-                .into_boxed_slice()
-                .into(),
-        });
+        let routes = config.into_services();
 
-        // construct app service and middleware service factory future.
-        let endpoint_fut = self.endpoint.new_service(());
-
-        Box::pin(async move {
-            let service = endpoint_fut.await?;
-
-            Ok(WorkerService {
-                service,
-            })
-        })
+        Box::pin(async move { Ok(WorkerService { routes, default }) })
     }
 }
 
-pub struct WorkerService<T>
-where
-    T: Service<ServiceRequest, Response = ServiceResponse, Error = Error>,
-{
-    service: T,
+pub struct WorkerService {
+    router: TaskRouter<BoxedTaskService>, // 路由表
+    default: BoxedTaskService,
 }
 
-impl<T> Service<Task> for WorkerService<T>
-where
-    T: Service<ServiceRequest, Response = ServiceResponse, Error = Error>,
-{
+impl Service<Task> for WorkerService {
     type Response = ServiceResponse;
-    type Error = T::Error;
-    type Future = T::Future;
+    type Error = Error;
+    type Future = LocalBoxFuture<'static, Result<Self::Response, Self::Error>>;
 
-    actix_service::forward_ready!(service);
+    fn poll_ready(
+        &self,
+        _cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Result<(), Self::Error>> {
+        // 因为路由表是静态的，始终可以处理请求
+        std::task::Poll::Ready(Ok(()))
+    }
 
     // 将原始的req转成ServiceReq
     fn call(&self, req: Task) -> Self::Future {
+        // 创建 ServiceRequest
         let ctx = TaskContext::new(req.name.as_str());
-        self.service.call(ServiceRequest::new(ctx))
+        let sreq = ServiceRequest::new(ctx);
+
+        todo!()
     }
 }
 
@@ -150,11 +123,7 @@ impl ServiceFactory<ServiceRequest> for WorkerRoutingFactory {
         let factory_fut = join_all(self.services.iter().map(|(path, factory)| {
             let path = path.clone();
             let factory_fut = factory.new_service(());
-            async move {
-                factory_fut
-                    .await
-                    .map(move |service| (path, service))
-            }
+            async move { factory_fut.await.map(move |service| (path, service)) }
         }));
 
         // construct default service factory future

@@ -1,42 +1,32 @@
 use std::{cell::RefCell, rc::Rc};
 
-use actix_service::{IntoServiceFactory, ServiceFactory};
+use actix_service::IntoServiceFactory;
 
 use crate::{
-    error::Error,
     service::{
         AppServiceFactory, BoxedTaskServiceFactory, HttpServiceFactory, ServiceFactoryWrapper,
-        ServiceRequest, ServiceResponse,
     },
     task::Task,
-    worker_service::{WorkerEntry, WorkerFactory, WorkerRoutingFactory},
+    worker_service::WorkerFactory,
 };
 
-pub struct Worker<T> {
-    endpoint: T,
+pub struct Worker {
     services: Vec<Box<dyn AppServiceFactory>>,
     default: Option<Rc<BoxedTaskServiceFactory>>,
-    factory_ref: Rc<RefCell<Option<WorkerRoutingFactory>>>,
 }
 
-impl Worker<WorkerEntry> {
+impl Worker {
     #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
-        let factory_ref = Rc::new(RefCell::new(None));
 
         Worker {
-            endpoint: WorkerEntry::new(Rc::clone(&factory_ref)),
             services: Vec::new(),
             default: None,
-            factory_ref,
         }
     }
 }
 
-impl<T> Worker<T>
-where
-    T: ServiceFactory<ServiceRequest, Config = (), Error = Error, InitError = ()>,
-{
+impl Worker{
     pub fn service<F>(mut self, factory: F) -> Self
     where
         F: HttpServiceFactory + 'static,
@@ -47,22 +37,12 @@ where
     }
 }
 
-impl<T> IntoServiceFactory<WorkerFactory<T>, Task> for Worker<T>
-where
-    T: ServiceFactory<
-            ServiceRequest,
-            Config = (),
-            Response = ServiceResponse,
-            Error = Error,
-            InitError = (),
-        > + 'static,
+impl IntoServiceFactory<WorkerFactory, Task> for Worker
 {
-    fn into_factory(self) -> WorkerFactory<T> {
+    fn into_factory(self) -> WorkerFactory {
         WorkerFactory {
-            endpoint: self.endpoint,
             services: Rc::new(RefCell::new(self.services)),
             default: self.default,
-            factory_ref: self.factory_ref,
         }
     }
 }
@@ -70,8 +50,6 @@ where
 #[cfg(test)]
 mod tests {
     use std::time::Instant;
-
-    use actix_service::{IntoServiceFactory, Service, ServiceFactory};
 
     use crate::{responder::Responder, task::Task, web};
 
