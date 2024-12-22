@@ -1,9 +1,6 @@
 [package]
-name = "misc"
+name = "core"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-uuid = "1.11.0"
-
-[dev-dependencies]

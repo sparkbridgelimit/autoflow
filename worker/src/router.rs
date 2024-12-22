@@ -1,7 +1,3 @@
-use std::rc::Rc;
-
-use ahash::AHashMap;
-
 use crate::service::ServiceRequest;
 
 
@@ -91,19 +87,6 @@ impl<T> RouterBuilder<T> {
     pub fn finish(self) -> TaskRouter<T> {
         TaskRouter {
             routes: self.routes,
-        }
-    }
-}
-
-#[derive(Clone, Debug)]
-pub struct ResourceMap {
-    named: AHashMap<String, Rc<ResourceMap>>,
-}
-
-impl ResourceMap {
-    pub fn new() -> Self {
-        ResourceMap {
-            named: AHashMap::default(),
         }
     }
 }

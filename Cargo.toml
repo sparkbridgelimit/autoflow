@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [workspace]
-members = ["codegen", "worker", "misc", "schedule", "workflow"]
+members = ["codegen", "worker", "misc", "schedule", "workflow", "core", "server", "node_adapter"]
 
 [dependencies]
 anyhow = "1.0.89"
